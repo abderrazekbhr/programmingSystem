@@ -8,7 +8,7 @@
 
 char *executeCommand()
 {
-    char *MSGINPUT = "Enter a command:";
+    const char *MSGINPUT = "enseash%% ";
     char *cmd = (char *)malloc(SIZE * sizeof(char));
     if (cmd == NULL)
     {
@@ -16,9 +16,19 @@ char *executeCommand()
         exit(EXIT_FAILURE);
     }
 
-    if (write(STDOUT_FILENO, MSGINPUT, sizeof(MSGINPUT)) > -1)
+    if (write(STDOUT_FILENO, MSGINPUT, strlen(MSGINPUT)) == -1)
     {
-        fgets(cmd, SIZE, stdin);
+        perror("Error writing to the terminal");
+        free(cmd);
+        exit(EXIT_FAILURE);
+    }
+
+    ssize_t bytesRead = read(STDIN_FILENO, cmd, SIZE);
+    if (bytesRead == -1)
+    {
+        perror("Error reading from the terminal");
+        free(cmd);
+        exit(EXIT_FAILURE);
     }
 
     // Remove the newline character from the end of the input
@@ -33,23 +43,29 @@ char *executeCommand()
 
 int main()
 {
-    char *MSG = "enseash%% %s\n";
+    const char *ERRORMSG = "Erreur: You can't execute this command\n";
     while (1)
     {
         char *command = executeCommand();
-        // Do something with the command, e.g., execute it using system()
-        printf(command);
-        if (execl(command, "") == 0)
+        //we create every time our child and execute the command entred
+        if (fork() == 0)
         {
-            printf("\n");
+            if (execlp(command, command, NULL) == -1)
+            {
+                // If execlp fails
+                perror(ERRORMSG);
+                exit(EXIT_FAILURE);
+
+            }
+            exit(EXIT_SUCCESS);
         }
         else
         {
-            perror("erreur you can't execute this command\n");
+            wait(NULL);
+            // Free the allocated memory
         }
-        // Free the allocated memory
-        free(command);
     }
+    
 
     return 0;
 }

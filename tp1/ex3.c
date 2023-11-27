@@ -3,25 +3,34 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <signal.h>
 
 #define SIZE 100
 
 char *executeCommand()
 {
+    const char *MSGINPUT = "enseash%% ";
+
     char *cmd = (char *)malloc(SIZE * sizeof(char));
-    
-    //verify if there enough memory
     if (cmd == NULL)
     {
         fprintf(stderr, "Memory allocation error\n");
         exit(EXIT_FAILURE);
     }
 
-    printf("Enter a command: ");
-    if (fgets(cmd, SIZE, stdin) == NULL)
+    if (write(STDOUT_FILENO, MSGINPUT, strlen(MSGINPUT)) == -1)
     {
+        perror("Error writing to the terminal");
         free(cmd);
-        exit(EXIT_SUCCESS); // Exit if Ctrl+D is pressed
+        exit(EXIT_FAILURE);
+    }
+
+    ssize_t bytesRead = read(STDIN_FILENO, cmd, SIZE);
+    if (bytesRead == -1)
+    {
+        perror("Error reading from the terminal");
+        free(cmd);
+        exit(EXIT_FAILURE);
     }
 
     // Remove the newline character from the end of the input
@@ -36,30 +45,45 @@ char *executeCommand()
 
 int main()
 {
+    const char *ERRORMSG = "Erreur lors de l'exécution de la commande\n";
+
     while (1)
     {
         char *command = executeCommand();
-        // Do something with the command, e.g., execute it using system()
-        printf("enseash%% %s\n", command);
-        if (strcmp(command, "exit") == 0 || strcmp(command, "<ctrl>+d") == 0)
+
+        // Quitter la boucle si la commande est "exit" ou si Ctrl+D (EOF) est atteint
+        if (strcmp(command, "exit") == 0 || strlen(command) == 0)
         {
-            printf("Bye bye...\n");
-            system("exit");
+            write(STDOUT_FILENO, "Bye bye...\n", strlen("Bye bye...\n"));
             free(command);
             break;
         }
-        printf("///\n");
-        if (system(command) == 0)
+
+        pid_t child_pid = fork();
+
+        if (child_pid == -1)
         {
-            printf("\n");
+            perror("Fork failed");
+            free(command);
+            exit(EXIT_FAILURE);
+        }
+        if (child_pid == 0)
+        {
+            // Processus fils
+            if (execlp(command, command, NULL) == -1)
+            {
+                perror(ERRORMSG);
+                exit(EXIT_FAILURE);
+            }
         }
         else
         {
-            perror("Error: Unable to execute the command\n");
+            // Processus parent
+            int status;
+            waitpid(child_pid, &status, 0);
+            command="\0";
+            // Libérer la mémoire allouée
         }
-
-        // Free the allocated memory
-        free(command);
     }
 
     return 0;

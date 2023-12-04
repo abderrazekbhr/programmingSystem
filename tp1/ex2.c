@@ -44,11 +44,13 @@ char *executeCommand()
 int main()
 {
     const char *ERRORMSG = "Erreur: You can't execute this command\n";
+    
     while (1)
     {
         char *command = executeCommand();
+        pid_t child_pid;
         //we create every time our child and execute the command entred
-        if (fork() == 0)
+        if (child_pid=fork() == 0)
         {
             if (execlp(command, command, NULL) == -1)
             {
@@ -61,8 +63,9 @@ int main()
         }
         else
         {
-            wait(NULL);
-            // Free the allocated memory
+            int status;
+            wait(&status);
+            command="\0";
         }
     }
     

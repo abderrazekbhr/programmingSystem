@@ -45,7 +45,7 @@ char *executeCommand()
 
 int main()
 {
-    const char *ERRORMSG = "Erreur lors de l'exécution de la commande\n";
+    const char *ERRORMSG = "Erreur: You can't execute this command\n";
 
     while (1)
     {
@@ -75,13 +75,14 @@ int main()
                 perror(ERRORMSG);
                 exit(EXIT_FAILURE);
             }
+            exit(EXIT_SUCCESS);
         }
         else
         {
             // Processus parent
             int status;
-            waitpid(child_pid, &status, 0);
-            command="\0";
+            wait(&status);
+            command = "\0";
             // Libérer la mémoire allouée
         }
     }

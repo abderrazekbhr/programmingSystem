@@ -1,74 +1,106 @@
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <time.h>
-#include <linux/time.h>
+#include <signal.h>
 
-#define MAX_INPUT_SIZE 1024
+#define SIZE 100
 
-void printPrompt(int exitCode, long elapsedTime) {
-    if (WIFEXITED(exitCode)) {
-        printf("enseash [exit:%d|%ldms] %% ", WEXITSTATUS(exitCode), elapsedTime);
-    } else if (WIFSIGNALED(exitCode)) {
-        printf("enseash [sign:%d|%ldms] %% ", WTERMSIG(exitCode), elapsedTime);
-    } else {
-        printf("enseash [unknown|%ldms] %% ", elapsedTime);
+char *executeCommand()
+{
+    const char *MSGINPUT = "enseash%% ";
+
+    char *cmd = (char *)malloc(SIZE * sizeof(char));
+    if (cmd == NULL)
+    {
+        fprintf(stderr, "Memory allocation error\n");
+        exit(EXIT_FAILURE);
     }
+
+    if (write(STDOUT_FILENO, MSGINPUT, strlen(MSGINPUT)) == -1)
+    {
+        perror("Error writing to the terminal");
+        free(cmd);
+        exit(EXIT_FAILURE);
+    }
+
+    ssize_t bytesRead = read(STDIN_FILENO, cmd, SIZE);
+    if (bytesRead == -1)
+    {
+        perror("Error reading from the terminal");
+        free(cmd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Remove the newline character from the end of the input
+    size_t len = strlen(cmd);
+    if (len > 0 && cmd[len - 1] == '\n')
+    {
+        cmd[len - 1] = '\0';
+    }
+
+    return cmd;
 }
 
-int main() {
-    char user_input[MAX_INPUT_SIZE];
+int main()
+{
+    const char *ERRORMSG = "Erreur: You can't execute this command\n";
+    char *command;
+    while (1)
+    {
 
-    while (1) {
-        printf("enseash %% ");
-        fgets(user_input, sizeof(user_input), stdin);
+        command = executeCommand();
+        pid_t child_pid = fork();
 
-        // Remove the newline character at the end
-        size_t len = strlen(user_input);
-        if (len > 0 && user_input[len - 1] == '\n') {
-            user_input[len - 1] = '\0';
+        if (child_pid == -1)
+        {
+            perror("Fork failed");
+            exit(EXIT_FAILURE);
+        }
+        // child process
+        if (child_pid == 0)
+        {
+
+            printf("pid_fils=%d\n", getpid());
+            sleep(20);
+            // Exit the loop if the command is "exit" or if Ctrl+D (EOF) is reached
+
+            if (strcmp(command, "exit") == 0 || strlen(command) == 0)
+            {
+                write(STDOUT_FILENO, "Bye bye...\n", strlen("Bye bye...\n"));
+                free(command);
+                break;
+            }
+            if (execlp(command, command, NULL) == -1)
+            {
+                perror(ERRORMSG);
+                free(command);
+                exit(EXIT_FAILURE);
+            }
+            exit(EXIT_SUCCESS);
         }
 
-        if (strcmp(user_input, "exit") == 0) {
-            break;
-        }
-
-        pid_t pid = fork();
-
-        if (pid == -1) {
-            perror("Error creating child process");
-            exit(EXIT_FAILURE);
-        } else if (pid == 0) { // Child process
-            struct timespec start, end;
-
-            clock_gettime(CLOCK_MONOTONIC, &start);
-
-            // Execute the command
-            execlp(user_input, user_input, (char *)NULL);
-
-            // If execlp fails
-            perror("Error executing command");
-            exit(EXIT_FAILURE);
-        } else { // Parent process
+        // parent instruction
+        else
+        {
             int status;
-            struct timespec start, end;
+            wait(&status);
+            char msgState[100] = "\0";
 
-            clock_gettime(CLOCK_MONOTONIC, &start);
-
-            waitpid(pid, &status, 0);
-
-            clock_gettime(CLOCK_MONOTONIC, &end);
-
-            long elapsedTime = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000;
-
-            printPrompt(status, elapsedTime);
+            // test if the process complete correcty or if there is an interruption and specify which type of interruption presented
+            if (WIFEXITED(status))
+            {
+                sprintf(msgState, "enseash %% [exit | %d]\n\0", WEXITSTATUS(status));
+                write(STDOUT_FILENO, msgState, sizeof(msgState));
+            }
+            else
+            {
+                sprintf(msgState, "enseash %% [sign :%d]\n\0", status);
+                write(STDOUT_FILENO, msgState, sizeof(msgState));
+            }
+            command = "\0";
+            // free memory
         }
     }
-
-    printf("Exiting the REPL. Goodbye!\n");
-
-    return 0;
 }

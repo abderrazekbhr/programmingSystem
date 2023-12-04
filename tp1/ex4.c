@@ -14,7 +14,7 @@ char *executeCommand()
     char *cmd = (char *)malloc(SIZE * sizeof(char));
     if (cmd == NULL)
     {
-        fprintf(stderr, "Memory allocation error\n");
+        perror("Memory allocation error");
         exit(EXIT_FAILURE);
     }
 
@@ -70,7 +70,7 @@ int main()
             {
                 write(STDOUT_FILENO, "Bye bye...\n", strlen("Bye bye...\n"));
                 free(command);
-                break;
+                exit(EXIT_SUCCESS);
             }
             if (execlp(command, command, NULL) == -1)
             {
@@ -78,7 +78,6 @@ int main()
                 free(command);
                 exit(EXIT_FAILURE);
             }
-            exit(EXIT_SUCCESS);
         }
 
         // parent instruction
@@ -88,19 +87,20 @@ int main()
             wait(&status);
             char msgState[100] = "\0";
 
-            // test if the process complete correcty or if there is an interruption and specify which type of interruption presented
+            // test if the process completes correctly or if there is an interruption and specify which type of interruption presented
             if (WIFEXITED(status))
             {
-                sprintf(msgState, "enseash %% [exit | %d]\n\0", WEXITSTATUS(status));
-                write(STDOUT_FILENO, msgState, sizeof(msgState));
+                snprintf(msgState, sizeof(msgState), "enseash %% [exit | %d]\n", WEXITSTATUS(status));
+                write(STDOUT_FILENO, msgState, strlen(msgState));
             }
             else
             {
-                sprintf(msgState, "enseash %% [sign :%d]\n\0", status);
-                write(STDOUT_FILENO, msgState, sizeof(msgState));
+                snprintf(msgState, sizeof(msgState), "enseash %% [sign :%d]\n", status);
+                write(STDOUT_FILENO, msgState, strlen(msgState));
             }
-            command = "\0";
             // free memory
+            free(command);
         }
     }
+    return 0;
 }

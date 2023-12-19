@@ -28,7 +28,7 @@ Notre programme s'engage dans la réception du fichier, encapsulé dans un seul 
 
 ![](Aspose.Words.5651b740-6338-44ba-9ffe-508344aad80a.004.png)
 
-![](Aspose.Words.5651b740-6338-44ba-9ffe-508344aad80a.005.png)²![](Aspose.Words.5651b740-6338-44ba-9ffe-508344aad80a.006.png)                   ![](Aspose.Words.5651b740-6338-44ba-9ffe-508344aad80a.007.png)
+![](Aspose.Words.5651b740-6338-44ba-9ffe-508344aad80a.006.png)                   ![](Aspose.Words.5651b740-6338-44ba-9ffe-508344aad80a.007.png)
 
 **4. PutTFTP :**
 
